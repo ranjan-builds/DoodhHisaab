@@ -16,7 +16,7 @@ const APP_STATE = {
     theme: "light",
   },
   currentSessionMode: "morning",
-  activeTab: "dashboard",
+  activeTab: "today",
   dashboardFilter: "all",
   chartInstance: null,
   lastCalculatedRange: null, // Cached range calculation result for export
@@ -38,6 +38,7 @@ const SHEET_ENDPOINT_URL =
 const DB_NAME = "DoodhHisabDB";
 const DB_VERSION = 1;
 let dbInstance = null;
+let milkSummaryWeekOffset = 0;
 
 function openDatabase() {
   return new Promise((resolve, reject) => {
@@ -429,7 +430,9 @@ function switchTab(tabId) {
     }
   });
 
-  if (tabId === "dashboard") {
+  if (tabId === "today") {
+    renderTodayOverview();
+  } else if (tabId === "dashboard") {
     renderDashboard();
   } else if (tabId === "records") {
     renderMasterRecords();
@@ -440,6 +443,230 @@ function switchTab(tabId) {
   } else if (tabId === "reports") {
     renderReportsView();
   }
+}
+
+function addDaysToDateString(dateStr, days) {
+  const [year, month, day] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day + days))
+    .toISOString()
+    .slice(0, 10);
+}
+
+function getDateRangeLabel(startDate, endDate) {
+  return `${formatDateDisplay(startDate)} – ${formatDateDisplay(endDate)}`;
+}
+
+function getMilkCountForPeriod(
+  startDate,
+  endDate,
+  startSessions = ["evening"],
+  endSessions = ["morning"],
+) {
+  let totalPav = 0;
+  let totalAmount = 0;
+  const pavPerLitre = APP_STATE.settings.pavPerLitre;
+  const entriesByDate = new Map(
+    APP_STATE.entries.map((entry) => [entry.date, entry]),
+  );
+  const sessions = [];
+  const sessionAmount = (entry, session) => {
+    const amountKey = `${session}Amount`;
+    if (Number.isFinite(entry[amountKey])) return entry[amountKey];
+    const litres = entry[`${session}Litres`] || 0;
+    const pav = entry[`${session}Pav`] || 0;
+    const convertedLitres = Math.floor(pav / pavPerLitre);
+    const remainingPav = pav % pavPerLitre;
+    return (
+      (litres + convertedLitres) * APP_STATE.settings.pricePerLitre +
+      remainingPav * APP_STATE.settings.pricePerPav
+    );
+  };
+
+  for (let date = startDate; date <= endDate; date = addDaysToDateString(date, 1)) {
+    const entry = entriesByDate.get(date);
+    const sessionsForDate =
+      date === startDate
+        ? startSessions
+        : date === endDate
+          ? endSessions
+          : ["morning", "evening"];
+
+    sessionsForDate.forEach((session) => {
+      const litres = entry?.[`${session}Litres`] || 0;
+      const pav = entry?.[`${session}Pav`] || 0;
+      const sessionPav = litres * pavPerLitre + pav;
+      const amount = sessionAmount(entry || {}, session);
+      totalPav += sessionPav;
+      totalAmount += amount;
+      sessions.push({
+        date,
+        weekday: getHindiWeekdayFromDateStr(date).en,
+        session: session === "morning" ? "सुबह (Morning)" : "शाम (Evening)",
+        milk: `${litres} L ${pav} पाव`,
+        amount,
+        recorded: Boolean(entry),
+      });
+    });
+  }
+
+  const litres = Math.floor(totalPav / pavPerLitre);
+  const remainingPav = totalPav % pavPerLitre;
+  return {
+    display: `${litres} L${remainingPav > 0 ? ` ${remainingPav} पाव` : ""}`,
+    decimal: (totalPav / pavPerLitre).toFixed(2),
+    amount: totalAmount,
+    sessions,
+  };
+}
+
+function renderMilkPeriodBreakdown(containerId, period) {
+  const container = document.getElementById(containerId);
+  container.replaceChildren();
+
+  if (period.sessions.length === 0) {
+    const emptyMessage = document.createElement("p");
+    emptyMessage.className =
+      "p-4 text-sm text-slate-500 dark:text-slate-400";
+    emptyMessage.innerText = "इस अवधि के लिए कोई रिकॉर्ड उपलब्ध नहीं है।";
+    container.appendChild(emptyMessage);
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className =
+    "w-full min-w-[32rem] text-left text-xs sm:text-sm";
+  table.innerHTML = `
+    <thead class="bg-slate-100 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+      <tr>
+        <th class="px-3 py-2 font-bold">दिनांक</th>
+        <th class="px-3 py-2 font-bold">सत्र</th>
+        <th class="px-3 py-2 font-bold">दूध</th>
+        <th class="px-3 py-2 font-bold">स्थिति</th>
+        <th class="px-3 py-2 text-right font-bold">रकम</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  `;
+  const tbody = table.querySelector("tbody");
+
+  period.sessions.forEach((item) => {
+    const row = document.createElement("tr");
+    row.className =
+      "border-t border-slate-100 text-slate-700 dark:border-slate-700 dark:text-slate-200";
+    [
+      `${formatDateDisplay(item.date)} (${item.weekday})`,
+      item.session,
+      item.milk,
+      item.recorded ? "दर्ज (Recorded)" : "रिकॉर्ड नहीं (Not recorded)",
+      formatIndianCurrency(item.amount),
+    ].forEach((value, index) => {
+      const cell = document.createElement("td");
+      cell.className = `px-3 py-2.5 ${index === 4 ? "text-right font-bold" : ""}`;
+      cell.innerText = value;
+      row.appendChild(cell);
+    });
+    tbody.appendChild(row);
+  });
+
+  container.appendChild(table);
+}
+
+function renderTodayOverview() {
+  const todayDate = getIndiaDateString();
+  const weekday = getHindiWeekdayFromDateStr(todayDate);
+  const todayRecord = APP_STATE.entries.find((entry) => entry.date === todayDate);
+  const dateObj = new Date(`${todayDate}T00:00:00Z`);
+  const daysSinceWednesday = (dateObj.getUTCDay() - 3 + 7) % 7;
+  const currentWednesdayDate = addDaysToDateString(
+    todayDate,
+    -daysSinceWednesday,
+  );
+  const wednesdayDate = addDaysToDateString(
+    currentWednesdayDate,
+    milkSummaryWeekOffset * 7,
+  );
+  const sundayDate = addDaysToDateString(wednesdayDate, 4);
+  const nextWednesdayDate = addDaysToDateString(wednesdayDate, 7);
+  const firstPeriod = getMilkCountForPeriod(
+    wednesdayDate,
+    sundayDate,
+    ["morning"],
+  );
+  const secondPeriod = getMilkCountForPeriod(sundayDate, nextWednesdayDate);
+  const pavPerLitre = APP_STATE.settings.pavPerLitre;
+  const setText = (id, value) => {
+    document.getElementById(id).innerText = value;
+  };
+  setText(
+    "milkSummaryWeekLabel",
+    `${milkSummaryWeekOffset === 0 ? "वर्तमान सप्ताह" : "पिछला सप्ताह"} · ${getDateRangeLabel(wednesdayDate, nextWednesdayDate)}`,
+  );
+  document.getElementById("milkSummaryNextWeek").disabled =
+    milkSummaryWeekOffset === 0;
+
+  setText("todayOverviewDate", formatDateDisplay(todayDate));
+  setText("todayOverviewWeekday", `${weekday.hi} (${weekday.en})`);
+  setText(
+    "todayOverviewStatus",
+    todayRecord ? "" : "आज का रिकॉर्ड अभी उपलब्ध नहीं है।",
+  );
+
+  const morningLitres = todayRecord?.morningLitres || 0;
+  const morningPav = todayRecord?.morningPav || 0;
+  const eveningLitres = todayRecord?.eveningLitres || 0;
+  const eveningPav = todayRecord?.eveningPav || 0;
+  setText(
+    "todayOverviewMorning",
+    `${morningLitres} L ${morningPav} पाव · ${(morningLitres + morningPav / pavPerLitre).toFixed(2)} L`,
+  );
+  setText(
+    "todayOverviewMorningAmount",
+    `रकम: ${formatIndianCurrency(todayRecord?.morningAmount || 0)}`,
+  );
+  setText(
+    "todayOverviewEvening",
+    `${eveningLitres} L ${eveningPav} पाव · ${(eveningLitres + eveningPav / pavPerLitre).toFixed(2)} L`,
+  );
+  setText(
+    "todayOverviewEveningAmount",
+    `रकम: ${formatIndianCurrency(todayRecord?.eveningAmount || 0)}`,
+  );
+  setText("todayOverviewTotalMilk", todayRecord?.totalMilkDisplay || "0 L");
+  setText(
+    "todayOverviewTotalAmount",
+    formatIndianCurrency(todayRecord?.totalAmount || 0),
+  );
+  setText(
+    "todayOverviewPayment",
+    formatIndianCurrency(todayRecord?.paymentReceived || 0),
+  );
+  setText(
+    "todayOverviewDeduction",
+    formatIndianCurrency(todayRecord?.deduction || 0),
+  );
+  setText(
+    "todayOverviewBalance",
+    formatIndianCurrency(
+      todayRecord?.outstandingBalance ?? APP_STATE.settings.openingBalance ?? 0,
+    ),
+  );
+
+  setText(
+    "milkCountFirstDates",
+    getDateRangeLabel(wednesdayDate, sundayDate),
+  );
+  setText("milkCountFirstTotal", firstPeriod.display);
+  setText("milkCountFirstDecimal", `${firstPeriod.decimal} litres`);
+  setText("milkCountFirstAmount", formatIndianCurrency(firstPeriod.amount));
+  renderMilkPeriodBreakdown("milkCountFirstBreakdown", firstPeriod);
+  setText(
+    "milkCountSecondDates",
+    getDateRangeLabel(sundayDate, nextWednesdayDate),
+  );
+  setText("milkCountSecondTotal", secondPeriod.display);
+  setText("milkCountSecondDecimal", `${secondPeriod.decimal} litres`);
+  setText("milkCountSecondAmount", formatIndianCurrency(secondPeriod.amount));
+  renderMilkPeriodBreakdown("milkCountSecondBreakdown", secondPeriod);
 }
 
 // --- 9. Dashboard Rendering & KPI Calculation ---
@@ -593,6 +820,8 @@ function renderDashboard() {
       recentTbody.appendChild(tr);
     });
   }
+
+  renderTodayOverview();
 }
 
 // --- 10. Master Records Tab & Table ---
@@ -1371,7 +1600,7 @@ function setSheetSyncStatus(status, isError = false) {
 }
 
 async function fetchFromGoogleSheet() {
-  setSheetSyncStatus("शीट डेटा लोड हो रहा है");
+  setSheetSyncStatus("Loading..");
 
   try {
     const response = await fetch(SHEET_ENDPOINT_URL, { cache: "no-store" });
@@ -1474,7 +1703,7 @@ async function fetchFromGoogleSheet() {
     await replaceEntriesInDB(entries);
     APP_STATE.entries = entries;
 
-    setSheetSyncStatus(`लाइव शीट • ${entries.length} रिकॉर्ड`);
+    setSheetSyncStatus(`Live • ${entries.length}`);
     renderDashboard();
     renderMasterRecords();
     renderPaymentsLedger();
@@ -1644,6 +1873,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       switchTab(btn.getAttribute("data-tab"));
     });
   });
+  document.querySelectorAll(".milk-summary-toggle").forEach((button) => {
+    button.addEventListener("click", () => {
+      const isExpanded = button.getAttribute("aria-expanded") === "true";
+      const summary = document.getElementById(button.getAttribute("aria-controls"));
+      button.setAttribute("aria-expanded", String(!isExpanded));
+      summary.classList.toggle("hidden", isExpanded);
+      button.innerText = isExpanded ? "दूध सारांश देखें" : "सारांश छिपाएँ";
+    });
+  });
 
   // Defensive Safe Listener Binding Helper
   function addSafeListener(id, event, handler) {
@@ -1652,6 +1890,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       el.addEventListener(event, handler);
     }
   }
+
+  addSafeListener("milkSummaryPreviousWeek", "click", () => {
+    milkSummaryWeekOffset -= 1;
+    renderTodayOverview();
+  });
+  addSafeListener("milkSummaryNextWeek", "click", () => {
+    milkSummaryWeekOffset = Math.min(0, milkSummaryWeekOffset + 1);
+    renderTodayOverview();
+  });
+  addSafeListener("milkSummaryCurrentWeek", "click", () => {
+    milkSummaryWeekOffset = 0;
+    renderTodayOverview();
+  });
 
   // Dashboard Filters
   document.querySelectorAll(".dash-filter-btn").forEach((btn) => {
