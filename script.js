@@ -528,41 +528,42 @@ function renderMilkPeriodBreakdown(containerId, period) {
 
   if (period.sessions.length === 0) {
     const emptyMessage = document.createElement("p");
-    emptyMessage.className =
-      "p-4 text-sm text-slate-500 dark:text-slate-400";
+    emptyMessage.className = "p-4 text-sm text-slate-500 dark:text-slate-400";
     emptyMessage.innerText = "इस अवधि के लिए कोई रिकॉर्ड उपलब्ध नहीं है।";
     container.appendChild(emptyMessage);
     return;
   }
 
   const table = document.createElement("table");
-  table.className =
-    "w-full min-w-[32rem] text-left text-xs sm:text-sm";
+  table.className = "w-full min-w-[34rem] text-left text-xs sm:text-sm";
   table.innerHTML = `
-    <thead class="bg-slate-100 text-[11px] uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+    <thead class="bg-slate-100 text-[11px] tracking-wide text-slate-600 dark:bg-slate-800 dark:text-slate-300">
       <tr>
-        <th class="px-3 py-2 font-bold">दिनांक</th>
-        <th class="px-3 py-2 font-bold">सत्र</th>
-        <th class="px-3 py-2 font-bold">दूध</th>
-        <th class="px-3 py-2 font-bold">स्थिति</th>
-        <th class="px-3 py-2 text-right font-bold">रकम</th>
+        <th class="px-3 py-2.5 font-bold">दिनांक</th>
+        <th class="px-3 py-2.5 font-bold">दिन</th>
+        <th class="px-3 py-2.5 font-bold">समय</th>
+        <th class="px-3 py-2.5 font-bold">मात्रा</th>
+        <th class="px-3 py-2.5 font-bold">स्थिति</th>
+        <th class="px-3 py-2.5 text-right font-bold">रकम</th>
       </tr>
     </thead>
-    <tbody></tbody>
+    <tbody class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
   `;
   const tbody = table.querySelector("tbody");
 
   period.sessions.forEach((item) => {
     const row = document.createElement("tr");
-    row.className =
-      "border-t border-slate-100 text-slate-700 dark:border-slate-700 dark:text-slate-200";
-    [
-      `${formatDateDisplay(item.date)} (${item.weekday})`,
+    row.className = "text-slate-700 transition-colors hover:bg-slate-50 dark:text-slate-200 dark:hover:bg-slate-700/60";
+    const values = [
+      formatDateDisplay(item.date),
+      item.weekday,
       item.session,
-      item.milk,
-      item.recorded ? "दर्ज (Recorded)" : "रिकॉर्ड नहीं (Not recorded)",
+      item.milk.replace(/ L/g, " लीटर"),
+      item.recorded ? "दर्ज" : "दर्ज नहीं",
       formatIndianCurrency(item.amount),
-    ].forEach((value, index) => {
+    ];
+
+    values.forEach((value, index) => {
       const cell = document.createElement("td");
       cell.className = `px-3 py-2.5 whitespace-nowrap ${index === 5 ? "text-right font-bold tabular-nums" : ""}`;
       cell.innerText = value;
@@ -2147,7 +2148,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     colorSchemeQuery.addListener(applySystemTheme);
   }
 
-  // Initial View Setup
+  const footerYear = document.getElementById("footerYear");\n  if (footerYear) footerYear.textContent = new Date().getFullYear();\n\n  // Initial View Setup
   renderDashboard();
   runDateRangeCalculator();
   fetchFromGoogleSheet();
