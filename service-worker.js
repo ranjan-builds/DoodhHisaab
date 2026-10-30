@@ -1,4 +1,4 @@
-const CACHE_NAME = 'doodh-hisaab-shell-v2';
+const CACHE_NAME = 'doodh-hisaab-shell-v3';
 const CACHE_PREFIX = 'doodh-hisaab-shell-';
 const APP_ROOT = new URL('./', self.location);
 const APP_SHELL = [
@@ -59,14 +59,17 @@ self.addEventListener('fetch', event => {
   if (APP_SHELL.includes(request.url)) {
     event.respondWith(
       (async () => {
-        const cached = await caches.match(request);
-        if (cached) return cached;
-
-        const response = await fetch(request);
-        if (response.ok) {
-          await (await caches.open(CACHE_NAME)).put(request, response.clone());
+        const cache = await caches.open(CACHE_NAME);
+        try {
+          // Network-first keeps deployed app files fresh while retaining offline support.
+          const response = await fetch(request, { cache: 'no-store' });
+          if (response.ok) await cache.put(request, response.clone());
+          return response;
+        } catch (error) {
+          const cached = await caches.match(request);
+          if (cached) return cached;
+          throw error;
         }
-        return response;
       })()
     );
   }
