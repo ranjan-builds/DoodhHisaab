@@ -180,6 +180,16 @@
     html.dark table { color: #e2e8f0; }
     html.dark .tab-navigation { border-color: #334155; }
 
+  
+    /* Consistent hover contrast for neutral controls in dark mode */
+    html.dark .hover\\:bg-white:hover { background-color: #334155 !important; }
+    html.dark .hover\\:bg-slate-50:hover,
+    html.dark .hover\\:bg-slate-100:hover { background-color: #334155 !important; }
+    html.dark .dark\\:hover\\:bg-slate-700:hover { background-color: #475569 !important; }
+    html.dark button:not([disabled]):focus-visible,
+    html.dark a:focus-visible { outline: 2px solid #60a5fa; outline-offset: 2px; }
+    html.dark .milk-summary-toggle:hover { filter: brightness(1.18); }
+
   </style>
 </head>
 <body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
@@ -1113,10 +1123,42 @@
   </main>
 
   <!-- ================= FOOTER ================= -->
-  <footer class="no-print border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
-    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-      <span><i data-lucide="milk" class="inline-icon" aria-hidden="true"></i> <strong>दूध हिसाब</strong> – पेशेवर दुग्ध लेखांकन और ग्राहक प्रबंधन प्रणाली</span>
-      <span class="text-[11px]">सुरक्षित स्थानीय संचयन (Persistent IndexedDB) • शून्य सर्वर निर्भरता</span>
+  <footer class="no-print border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-7">
+      <div class="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        <div class="sm:col-span-1">
+          <div class="flex items-center gap-2 text-slate-900 dark:text-white">
+            <span class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 text-white shadow-sm">
+              <i data-lucide="milk" class="w-5 h-5" aria-hidden="true"></i>
+            </span>
+            <span class="font-extrabold text-base">दूध हिसाब</span>
+          </div>
+          <p class="mt-3 max-w-sm text-xs leading-6 text-slate-500 dark:text-slate-400">दूध की मात्रा, दैनिक हिसाब और भुगतान का सरल डिजिटल रिकॉर्ड।</p>
+        </div>
+        <div>
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">निर्माता</h3>
+          <p class="mt-3 text-sm font-semibold">Ranjan Kashyap</p>
+          <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">Student • Developer • Tech enthusiast</p>
+        </div>
+        <div>
+          <h3 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-slate-100">संपर्क और प्रोजेक्ट</h3>
+          <div class="mt-3 flex flex-col items-start gap-2 text-sm">
+            <a href="https://github.com/ranjan-builds" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-slate-600 transition hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-blue-300">
+              <i data-lucide="github" class="w-4 h-4" aria-hidden="true"></i> GitHub: @ranjan-builds
+            </a>
+            <a href="mailto:ranjankashyap6475@gmail.com" class="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-slate-600 transition hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-blue-300">
+              <i data-lucide="mail" class="w-4 h-4" aria-hidden="true"></i> ranjankashyap6475@gmail.com
+            </a>
+            <a href="https://github.com/ranjan-builds/DoodhHisaab" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 rounded-lg px-2 py-1 text-slate-600 transition hover:bg-slate-100 hover:text-blue-600 dark:text-slate-300 dark:hover:bg-slate-700 dark:hover:text-blue-300">
+              <i data-lucide="code-2" class="w-4 h-4" aria-hidden="true"></i> इस प्रोजेक्ट का स्रोत कोड
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="mt-6 flex flex-col gap-2 border-t border-slate-200 pt-4 text-[11px] text-slate-500 dark:border-slate-700 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+        <span>© <span id="footerYear">2026</span> दूध हिसाब • सभी अधिकार सुरक्षित</span>
+        <span class="inline-flex items-center gap-1"><i data-lucide="shield-check" class="w-3.5 h-3.5" aria-hidden="true"></i> डेटा आपके डिवाइस पर सुरक्षित • IndexedDB</span>
+      </div>
     </div>
   </footer>
 
