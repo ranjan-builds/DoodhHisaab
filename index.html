@@ -5,6 +5,18 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>दूध हिसाब – Milk Accounting & Management System</title>
   <meta name="description" content="दूध आपूर्ति, भुगतान और बकाया राशि का हिसाब रखें।">
+  <link rel="canonical" href="https://ranjan-builds.github.io/DoodhHisaab/">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://ranjan-builds.github.io/DoodhHisaab/">
+  <meta property="og:title" content="दूध हिसाब – Milk Accounting & Management System">
+  <meta property="og:description" content="दूध आपूर्ति, भुगतान और बकाया राशि का हिसाब रखें।">
+  <meta property="og:image" content="https://ranjan-builds.github.io/DoodhHisaab/og-image.png">
+  <meta property="og:image:alt" content="दूध हिसाब – Milk Accounting & Management System">
+  <meta property="og:locale" content="hi_IN">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="दूध हिसाब – Milk Accounting & Management System">
+  <meta name="twitter:description" content="दूध आपूर्ति, भुगतान और बकाया राशि का हिसाब रखें।">
+  <meta name="twitter:image" content="https://ranjan-builds.github.io/DoodhHisaab/og-image.png">
   <meta name="theme-color" content="#1d4ed8">
   <link rel="icon" type="image/png" sizes="96x96" href="./favicons/favicon-96x96.png">
   <link rel="icon" type="image/svg+xml" href="./favicons/favicon.svg">
@@ -297,7 +309,7 @@
       <div class="rounded-3xl bg-gradient-to-br from-sky-600 via-blue-600 to-indigo-700 p-6 sm:p-8 text-white shadow-xl shadow-blue-900/10">
         <div class="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <p class="text-sm font-bold uppercase tracking-[0.16em] text-blue-100">आज का दूध</p>
+            <p class="text-sm font-bold uppercase text-blue-100">आज का दूध</p>
             <h1 id="todayOverviewDate" class="mt-2 text-3xl sm:text-4xl font-extrabold tracking-tight">—</h1>
           </div>
           <span id="todayOverviewWeekday" class="w-fit rounded-full border border-white/25 bg-white/15 px-4 py-2 text-sm font-bold">—</span>
@@ -372,7 +384,7 @@
             <p id="milkCountFirstDecimal" class="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">0.00 litres</p>
             <p id="milkCountFirstAmount" class="mt-3 text-xl font-extrabold text-slate-800 dark:text-white">₹0.00</p>
             <button type="button" class="milk-summary-toggle mt-4 inline-flex items-center gap-2 rounded-xl border border-amber-300 bg-white/70 px-4 py-2 text-sm font-bold text-amber-800 transition hover:bg-white dark:border-amber-800 dark:bg-slate-900/40 dark:text-amber-200 dark:hover:bg-slate-900/70" data-summary="first" aria-expanded="false" aria-controls="milkCountFirstBreakdown">
-              <i data-lucide="list" class="w-4 h-4" aria-hidden="true"></i> दूध सारांश देखें
+              <i data-lucide="list" class="w-4 h-4" aria-hidden="true"></i> More Details
             </button>
             <div id="milkCountFirstBreakdown" class="hidden mt-4 overflow-x-auto rounded-xl border border-amber-200 bg-white/80 dark:border-amber-900/60 dark:bg-slate-900/40"></div>
           </article>
@@ -388,7 +400,7 @@
             <p id="milkCountSecondDecimal" class="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-400">0.00 litres</p>
             <p id="milkCountSecondAmount" class="mt-3 text-xl font-extrabold text-slate-800 dark:text-white">₹0.00</p>
             <button type="button" class="milk-summary-toggle mt-4 inline-flex items-center gap-2 rounded-xl border border-indigo-300 bg-white/70 px-4 py-2 text-sm font-bold text-indigo-800 transition hover:bg-white dark:border-indigo-800 dark:bg-slate-900/40 dark:text-indigo-200 dark:hover:bg-slate-900/70" data-summary="second" aria-expanded="false" aria-controls="milkCountSecondBreakdown">
-              <i data-lucide="list" class="w-4 h-4" aria-hidden="true"></i> दूध सारांश देखें
+              <i data-lucide="list" class="w-4 h-4" aria-hidden="true"></i> More Details
             </button>
             <div id="milkCountSecondBreakdown" class="hidden mt-4 overflow-x-auto rounded-xl border border-indigo-200 bg-white/80 dark:border-indigo-900/60 dark:bg-slate-900/40"></div>
           </article>

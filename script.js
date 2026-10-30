@@ -1902,7 +1902,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const summary = document.getElementById(button.getAttribute("aria-controls"));
       button.setAttribute("aria-expanded", String(!isExpanded));
       summary.classList.toggle("hidden", isExpanded);
-      button.innerText = isExpanded ? "दूध सारांश देखें" : "सारांश छिपाएँ";
+      button.innerText = isExpanded ? "More Details" : "Hide Details";
     });
   });
 
