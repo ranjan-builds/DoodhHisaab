@@ -503,8 +503,8 @@ function getMilkCountForPeriod(
       totalAmount += amount;
       sessions.push({
         date,
-        weekday: getHindiWeekdayFromDateStr(date).en,
-        session: session === "morning" ? "सुबह (Morning)" : "शाम (Evening)",
+        weekday: getHindiWeekdayFromDateStr(date).hi,
+        session: session === "morning" ? "सुबह" : "शाम",
         milk: `${litres} L ${pav} पाव`,
         amount,
         recorded: Boolean(entry),
@@ -564,7 +564,7 @@ function renderMilkPeriodBreakdown(containerId, period) {
       formatIndianCurrency(item.amount),
     ].forEach((value, index) => {
       const cell = document.createElement("td");
-      cell.className = `px-3 py-2.5 ${index === 4 ? "text-right font-bold" : ""}`;
+      cell.className = `px-3 py-2.5 whitespace-nowrap ${index === 5 ? "text-right font-bold tabular-nums" : ""}`;
       cell.innerText = value;
       row.appendChild(cell);
     });
@@ -660,7 +660,7 @@ function renderTodayOverview() {
     getDateRangeLabel(wednesdayDate, sundayDate),
   );
   setText("milkCountFirstTotal", firstPeriod.display);
-  setText("milkCountFirstDecimal", `${firstPeriod.decimal} litres`);
+  setText("milkCountFirstDecimal", `${firstPeriod.decimal} लीटर`);
   setText("milkCountFirstAmount", formatIndianCurrency(firstPeriod.amount));
   renderMilkPeriodBreakdown("milkCountFirstBreakdown", firstPeriod);
   setText(
@@ -668,7 +668,7 @@ function renderTodayOverview() {
     getDateRangeLabel(sundayDate, nextWednesdayDate),
   );
   setText("milkCountSecondTotal", secondPeriod.display);
-  setText("milkCountSecondDecimal", `${secondPeriod.decimal} litres`);
+  setText("milkCountSecondDecimal", `${secondPeriod.decimal} लीटर`);
   setText("milkCountSecondAmount", formatIndianCurrency(secondPeriod.amount));
   renderMilkPeriodBreakdown("milkCountSecondBreakdown", secondPeriod);
 }
