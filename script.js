@@ -121,6 +121,7 @@ async function clearAllDataFromDB() {
   return new Promise((resolve, reject) => {
     const tx = dbInstance.transaction(["entries", "settings"], "readwrite");
     tx.objectStore("entries").clear();
+    tx.objectStore("settings").clear();
     tx.oncomplete = () => resolve(true);
     tx.onerror = (e) => reject(e);
   });
@@ -142,6 +143,9 @@ function computeDailyRecord(
   const eP = Math.max(0, parseInt(eveningP) || 0);
   const pAmt = Math.max(0, parseFloat(paid) || 0);
   const dAmt = Math.max(0, parseFloat(deduction) || 0);
+  if (!Number.isInteger(settings.pavPerLitre) || settings.pavPerLitre <= 0) {
+    throw new RangeError("पाव प्रति लीटर की संख्या 1 या उससे अधिक पूर्णांक होनी चाहिए।");
+  }
 
   const morningAddedL = Math.floor(mP / settings.pavPerLitre);
   const morningRemP = mP % settings.pavPerLitre;
@@ -590,6 +594,7 @@ function renderTodayOverview() {
   const firstPeriod = getMilkCountForPeriod(
     wednesdayDate,
     sundayDate,
+    ["evening"],
     ["morning"],
   );
   const secondPeriod = getMilkCountForPeriod(sundayDate, nextWednesdayDate);
@@ -1704,6 +1709,7 @@ async function fetchFromGoogleSheet() {
     APP_STATE.entries = entries;
 
     setSheetSyncStatus(`Live • ${entries.length}`);
+    renderTodayOverview();
     renderDashboard();
     renderMasterRecords();
     renderPaymentsLedger();
@@ -1838,6 +1844,23 @@ document.addEventListener("DOMContentLoaded", async () => {
     const storedSettings = await getSettingsFromDB();
     if (storedSettings && Object.keys(storedSettings).length > 0) {
       APP_STATE.settings = { ...APP_STATE.settings, ...storedSettings };
+    }
+    const savedPavPerLitre = Number(APP_STATE.settings.pavPerLitre);
+    if (!Number.isInteger(savedPavPerLitre) || savedPavPerLitre <= 0) {
+      APP_STATE.settings.pavPerLitre = 4;
+      await saveSettingToDB("pavPerLitre", 4);
+    }
+    for (const key of ["pricePerLitre", "pricePerPav"]) {
+      const value = Number(APP_STATE.settings[key]);
+      if (!Number.isFinite(value) || value < 0) {
+        APP_STATE.settings[key] = key === "pricePerLitre" ? 33 : 8;
+        await saveSettingToDB(key, APP_STATE.settings[key]);
+      }
+    }
+    const openingBalance = Number(APP_STATE.settings.openingBalance);
+    if (!Number.isFinite(openingBalance)) {
+      APP_STATE.settings.openingBalance = 0;
+      await saveSettingToDB("openingBalance", 0);
     }
 
     const storedEntries = await getAllEntriesFromDB();
@@ -2011,15 +2034,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (settingsForm) {
     settingsForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const pricePerLitre =
-        parseFloat(document.getElementById("settingRatePerLitre")?.value) || 33;
-      const pricePerPav =
-        parseFloat(document.getElementById("settingRatePerPav")?.value) || 8;
-      const pavPerLitre =
-        parseInt(document.getElementById("settingPavPerLitre")?.value) || 4;
-      const openingBalance =
-        parseFloat(document.getElementById("settingOpeningBalance")?.value) ||
-        0;
+      const readSettingNumber = (id, fallback) => {
+        const raw = document.getElementById(id)?.value?.trim() ?? "";
+        if (raw === "") return fallback;
+        const value = Number(raw);
+        return Number.isFinite(value) ? value : null;
+      };
+      const pricePerLitre = readSettingNumber("settingRatePerLitre", 33);
+      const pricePerPav = readSettingNumber("settingRatePerPav", 8);
+      const pavPerLitre = readSettingNumber("settingPavPerLitre", 4);
+      const openingBalance = readSettingNumber("settingOpeningBalance", 0);
+
+      if (
+        pricePerLitre === null || pricePerLitre < 0 ||
+        pricePerPav === null || pricePerPav < 0 ||
+        !Number.isInteger(pavPerLitre) || pavPerLitre <= 0 ||
+        openingBalance === null
+      ) {
+        showToast(
+          "दर शून्य या उससे अधिक रखें और पाव प्रति लीटर में 1 या उससे अधिक पूर्णांक दर्ज करें।",
+          "error",
+        );
+        return;
+      }
 
       APP_STATE.settings.pricePerLitre = pricePerLitre;
       APP_STATE.settings.pricePerPav = pricePerPav;
@@ -2037,6 +2074,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         "सेटिंग्स सुरक्षित हुईं व नई दरों से हिसाब अद्यतन हुआ",
         "success",
       );
+      renderTodayOverview();
       renderDashboard();
     });
   }
@@ -2047,7 +2085,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       encodeURIComponent(JSON.stringify(APP_STATE, null, 2));
     const a = document.createElement("a");
     a.href = dataStr;
-    a.download = `DoodhHisab_Backup_${new Date().toISOString().split("T")[0]}.json`;
+    a.download = `DoodhHisab_Backup_${getIndiaDateString()}.json`;
     a.click();
     showToast("JSON बैकअप फ़ाइल डाउनलोड हो गई", "success");
   });
@@ -2074,9 +2112,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       async () => {
         await clearAllDataFromDB();
         APP_STATE.entries = [];
-        showToast("सारा डेटा साफ़ कर दिया गया", "warn");
+        APP_STATE.settings = {
+          pricePerLitre: 33,
+          pricePerPav: 8,
+          pavPerLitre: 4,
+          openingBalance: 0,
+          currency: "₹",
+          theme: "light",
+        };
+        document.getElementById("settingRatePerLitre").value = 33;
+        document.getElementById("settingRatePerPav").value = 8;
+        document.getElementById("settingPavPerLitre").value = 4;
+        document.getElementById("settingOpeningBalance").value = 0;
+        applyTheme(false);
+        showToast("सभी रिकॉर्ड और सेटिंग्स साफ़ कर दी गईं", "warn");
+        renderTodayOverview();
         renderDashboard();
         renderMasterRecords();
+        renderPaymentsLedger();
+        renderReportsView();
+        runDateRangeCalculator();
       },
     );
   });
