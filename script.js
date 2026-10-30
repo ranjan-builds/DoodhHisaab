@@ -13,7 +13,6 @@ const APP_STATE = {
     pavPerLitre: 4,
     openingBalance: 0,
     currency: "₹",
-    theme: "light",
   },
   currentSessionMode: "morning",
   activeTab: "today",
@@ -2118,13 +2117,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           pavPerLitre: 4,
           openingBalance: 0,
           currency: "₹",
-          theme: "light",
         };
         document.getElementById("settingRatePerLitre").value = 33;
         document.getElementById("settingRatePerPav").value = 8;
         document.getElementById("settingPavPerLitre").value = 4;
         document.getElementById("settingOpeningBalance").value = 0;
-        applyTheme(false);
+        applySystemTheme();
         showToast("सभी रिकॉर्ड और सेटिंग्स साफ़ कर दी गईं", "warn");
         renderTodayOverview();
         renderDashboard();
@@ -2136,44 +2134,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     );
   });
 
-  // Dark Theme Toggle
-  const themeBtn = document.getElementById("themeToggleBtn");
-  function applyTheme(isDark) {
-    if (isDark) {
-      document.documentElement.classList.add("dark");
-      setThemeIcon("sun");
-      APP_STATE.settings.theme = "dark";
-    } else {
-      document.documentElement.classList.remove("dark");
-      setThemeIcon("moon");
-      APP_STATE.settings.theme = "light";
-    }
+  // Follow the operating system / device appearance preference.
+  const colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+  function applySystemTheme() {
+    document.documentElement.classList.toggle("dark", colorSchemeQuery.matches);
   }
-
-  function setThemeIcon(iconName) {
-    const icon = document.createElement("i");
-    icon.id = "themeIcon";
-    icon.setAttribute("data-lucide", iconName);
-    icon.className = "w-4 h-4";
-    icon.setAttribute("aria-hidden", "true");
-    document.getElementById("themeToggleBtn").replaceChildren(icon);
-    if (window.lucide) window.lucide.createIcons();
-  }
-
-  if (themeBtn) {
-    themeBtn.addEventListener("click", () => {
-      const isDark = document.documentElement.classList.contains("dark");
-      applyTheme(!isDark);
-      saveSettingToDB("theme", !isDark ? "dark" : "light");
-    });
-  }
-
-  if (
-    APP_STATE.settings.theme === "dark" ||
-    (!("theme" in APP_STATE.settings) &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches)
-  ) {
-    applyTheme(true);
+  applySystemTheme();
+  if (typeof colorSchemeQuery.addEventListener === "function") {
+    colorSchemeQuery.addEventListener("change", applySystemTheme);
+  } else if (typeof colorSchemeQuery.addListener === "function") {
+    // Older Safari support.
+    colorSchemeQuery.addListener(applySystemTheme);
   }
 
   // Initial View Setup

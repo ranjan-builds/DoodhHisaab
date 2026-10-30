@@ -149,6 +149,37 @@
         display: block !important;
       }
     }
+  
+    /* Device-driven dark theme and safeguards for components missing dark: utilities */
+    html.dark { color-scheme: dark; }
+    html:not(.dark) { color-scheme: light; }
+    html.dark body { background-color: #0f172a; color: #f1f5f9; }
+    html.dark .bg-white { background-color: #1e293b !important; }
+    html.dark .bg-slate-50 { background-color: #1e293b !important; }
+    html.dark .bg-slate-100 { background-color: #334155 !important; }
+    html.dark .bg-slate-200 { background-color: #475569 !important; }
+    html.dark .text-slate-900,
+    html.dark .text-slate-800 { color: #f1f5f9 !important; }
+    html.dark .text-slate-700 { color: #e2e8f0 !important; }
+    html.dark .text-slate-600 { color: #cbd5e1 !important; }
+    html.dark .text-slate-500 { color: #94a3b8 !important; }
+    html.dark .border-slate-100,
+    html.dark .border-slate-200,
+    html.dark .border-slate-300 { border-color: #475569 !important; }
+    html.dark input:not([type="checkbox"]):not([type="radio"]),
+    html.dark select,
+    html.dark textarea {
+      color-scheme: dark;
+      background-color: #1e293b;
+      color: #f1f5f9;
+      border-color: #475569;
+    }
+    html.dark input::placeholder,
+    html.dark textarea::placeholder { color: #94a3b8; }
+    html.dark option { background-color: #1e293b; color: #f1f5f9; }
+    html.dark table { color: #e2e8f0; }
+    html.dark .tab-navigation { border-color: #334155; }
+
   </style>
 </head>
 <body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
@@ -184,7 +215,7 @@
   <section id="rangePrintSlip" class="print-only"></section>
 
   <!-- ================= HEADER / NAVBAR ================= -->
-  <header class="no-print bg-white/95 dark:bg-slate-850 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 backdrop-blur-md">
+  <header class="no-print bg-white/95 dark:bg-slate-800 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 backdrop-blur-md">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="flex items-center justify-between h-16">
         <!-- Logo & Title -->
@@ -218,17 +249,11 @@
           <span id="headerSyncBadge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold border border-slate-300 dark:border-slate-700" role="status" aria-live="polite">
             <i data-lucide="cloud" class="w-3.5 h-3.5" aria-hidden="true"></i>
             <span>Loading..</span>
-          </span>
-
-          <!-- Theme Toggle -->
-          <button id="themeToggleBtn" aria-label="Toggle Theme" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
-            <i id="themeIcon" data-lucide="moon" class="w-4 h-4" aria-hidden="true"></i>
-          </button>
-        </div>
+          </span></div>
       </div>
 
       <!-- Navigation Tabs -->
-      <nav class="tab-navigation flex gap-1 overflow-x-auto py-2 text-xs sm:text-sm font-semibold border-t border-slate-100 dark:border-slate-750 snap-x snap-mandatory" aria-label="मुख्य नेविगेशन">
+      <nav class="tab-navigation flex gap-1 overflow-x-auto py-2 text-xs sm:text-sm font-semibold border-t border-slate-100 dark:border-slate-700 snap-x snap-mandatory" aria-label="मुख्य नेविगेशन">
         <button data-tab="today" class="tab-btn active shrink-0 snap-start px-3.5 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition bg-blue-600 text-white shadow-sm">
           <i data-lucide="sun" class="w-4 h-4" aria-hidden="true"></i> आज का दूध (Today)
         </button>
@@ -483,7 +508,7 @@
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs sm:text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-750 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
+            <thead class="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th class="px-4 py-3">दिनांक</th>
                 <th class="px-4 py-3">दिन</th>
@@ -509,17 +534,17 @@
         <div class="flex items-end gap-3 flex-wrap">
           <label class="text-[11px] font-bold text-slate-500">
             तारीख से खोजें
-            <input type="date" id="recordsFilterDate" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-xs">
+            <input type="date" id="recordsFilterDate" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs">
           </label>
           <label class="text-[11px] font-bold text-slate-500">
             महीना
-            <select id="recordsFilterMonth" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-xs font-semibold">
+            <select id="recordsFilterMonth" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs font-semibold">
               <option value="all">सभी महीने (All Months)</option>
             </select>
           </label>
           <label class="text-[11px] font-bold text-slate-500">
             सत्र फ़िल्टर
-            <select id="recordsFilterSession" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-xs font-semibold">
+            <select id="recordsFilterSession" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs font-semibold">
               <option value="all">सभी रिकॉर्ड्स</option>
               <option value="morning_only">केवल सुबह का दूध</option>
               <option value="evening_only">केवल शाम का दूध</option>
@@ -528,7 +553,7 @@
           </label>
           <label class="text-[11px] font-bold text-slate-500">
             क्रमबद्ध करें
-            <select id="recordsSortOrder" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-xs font-semibold">
+            <select id="recordsSortOrder" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-xs font-semibold">
               <option value="desc">नवीनतम पहले</option>
               <option value="asc">पुरातन पहले</option>
             </select>
@@ -543,7 +568,7 @@
       <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs sm:text-sm">
-            <thead class="bg-slate-100 dark:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
+            <thead class="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
               <tr>
                 <th class="px-3 py-3 text-center">क्र.सं. (S.No)</th>
                 <th class="px-4 py-3">दिनांक</th>
@@ -637,7 +662,7 @@
           </div>
 
           <!-- Middle / Intervening Days Filter Box -->
-          <div class="lg:col-span-4 bg-slate-50 dark:bg-slate-750 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3 flex flex-col justify-between">
+          <div class="lg:col-span-4 bg-slate-50 dark:bg-slate-700 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3 flex flex-col justify-between">
             <div>
               <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
                 <span><i data-lucide="refresh-cw" class="inline-icon" aria-hidden="true"></i></span> बीच के दिनों का सत्र (Intervening Days)
@@ -709,7 +734,7 @@
         <!-- Calculator Output Cards Grid -->
         <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
           
-          <div class="bg-slate-50 dark:bg-slate-750 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+          <div class="bg-slate-50 dark:bg-slate-700 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
             <span class="text-xs text-slate-500 dark:text-slate-400 font-medium block">कैलेंडर दिन</span>
             <span id="calcTotalDays" class="text-2xl font-black text-slate-800 dark:text-white mt-1 block">0</span>
             <span class="text-[10px] text-slate-400">कुल दिन</span>
@@ -749,7 +774,7 @@
 
         <!-- Breakdown Table in Calculator -->
         <div class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
-          <div class="p-3.5 bg-slate-50 dark:bg-slate-750 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2">
+          <div class="p-3.5 bg-slate-50 dark:bg-slate-700 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2">
             <div>
               <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">
                 दैनिक विस्तृत विवरण (Daily Breakdown of Selected Range)
@@ -814,7 +839,7 @@
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-left text-xs sm:text-sm">
-            <thead class="bg-slate-50 dark:bg-slate-750 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-700">
+            <thead class="bg-slate-50 dark:bg-slate-700 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th class="px-4 py-3">दिनांक</th>
                 <th class="px-4 py-3">दिन</th>
@@ -884,7 +909,7 @@
         </div>
 
         <!-- Statement Metadata -->
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-750 mb-6 text-xs">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-700 mb-6 text-xs">
           <div>
             <span class="text-slate-400 block">कुल दूध मात्रा:</span>
             <span id="reportTotalMilkQty" class="text-base font-bold text-slate-900 dark:text-white">0 L</span>
@@ -954,7 +979,7 @@
           </div>
         </div>
 
-        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-750 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
+        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
           <p class="font-bold mb-1">संरक्षित कॉलम संरचना:</p>
           <code class="text-blue-600 dark:text-blue-400 font-mono text-[11px] block break-all">
             S.No | दिनांक | दिन | सुबह दूध (L) | सुबह (पाव) | शाम दूध (L) | शाम (पाव) | कुल दूध | कुल पैसे | प्राप्त पैसे | कटौती पैसे | बकाया पैसे
@@ -965,7 +990,7 @@
           <button id="exportAllExcelActionBtn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-2">
             <span><i data-lucide="download" class="inline-icon" aria-hidden="true"></i></span> संपूर्ण दूध हिसाब डाउनलोड करें (दूध हिसाब.xlsx)
           </button>
-          <button id="exportMonthExcelActionBtn" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-650 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition">
+          <button id="exportMonthExcelActionBtn" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition">
             <i data-lucide="calendar-days" class="inline-icon" aria-hidden="true"></i> केवल इस महीने का निर्यात करें
           </button>
         </div>
@@ -984,7 +1009,7 @@
         </div>
 
         <!-- Drag & Drop Zone -->
-        <div id="dropZone" class="border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-500 dark:hover:border-blue-400 rounded-2xl p-8 text-center cursor-pointer bg-slate-50 dark:bg-slate-750 transition group">
+        <div id="dropZone" class="border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-500 dark:hover:border-blue-400 rounded-2xl p-8 text-center cursor-pointer bg-slate-50 dark:bg-slate-700 transition group">
           <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden">
           <div class="mb-2 group-hover:scale-110 transition transform"><i data-lucide="chart-column-increasing" class="w-10 h-10" aria-hidden="true"></i></div>
           <p class="text-sm font-bold text-slate-700 dark:text-slate-200">फाइल यहाँ खींचे या ब्राउज़ करने के लिए क्लिक करें</p>
@@ -1088,7 +1113,7 @@
   </main>
 
   <!-- ================= FOOTER ================= -->
-  <footer class="no-print border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+  <footer class="no-print border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-800 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
     <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
       <span><i data-lucide="milk" class="inline-icon" aria-hidden="true"></i> <strong>दूध हिसाब</strong> – पेशेवर दुग्ध लेखांकन और ग्राहक प्रबंधन प्रणाली</span>
       <span class="text-[11px]">सुरक्षित स्थानीय संचयन (Persistent IndexedDB) • शून्य सर्वर निर्भरता</span>
