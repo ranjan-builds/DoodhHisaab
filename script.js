@@ -2148,7 +2148,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     colorSchemeQuery.addListener(applySystemTheme);
   }
 
-  const footerYear = document.getElementById("footerYear");\n  if (footerYear) footerYear.textContent = new Date().getFullYear();\n\n  // Initial View Setup
+  const footerYear = document.getElementById("footerYear");
+  if (footerYear) footerYear.textContent = new Date().getFullYear();
+
+  // Initial View Setup
   renderDashboard();
   runDateRangeCalculator();
   fetchFromGoogleSheet();
