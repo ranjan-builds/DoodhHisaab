@@ -1,4 +1,4 @@
-const CACHE_NAME = 'doodh-hisaab-shell-v1';
+const CACHE_NAME = 'doodh-hisaab-shell-v2';
 const CACHE_PREFIX = 'doodh-hisaab-shell-';
 const APP_ROOT = new URL('./', self.location);
 const APP_SHELL = [
