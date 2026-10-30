@@ -1,8 +1,9 @@
-const CACHE_NAME = 'doodh-hisaab-shell-v1';
+const CACHE_NAME = 'doodh-hisaab-shell-v2';
 const CACHE_PREFIX = 'doodh-hisaab-shell-';
 const APP_ROOT = new URL('./', self.location);
 const APP_SHELL = [
   new URL('index.html', APP_ROOT).href,
+  new URL('script.js', APP_ROOT).href,
   new URL('favicons/site.webmanifest', APP_ROOT).href,
   new URL('favicons/favicon-96x96.png', APP_ROOT).href,
   new URL('favicons/favicon.svg', APP_ROOT).href,
