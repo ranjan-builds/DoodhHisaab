@@ -1,0 +1,994 @@
+<!DOCTYPE html>
+<html lang="hi" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>दूध हिसाब – Milk Accounting & Management System</title>
+  <meta name="description" content="दूध आपूर्ति, भुगतान और बकाया राशि का हिसाब रखें।">
+  <meta name="theme-color" content="#1d4ed8">
+  <link rel="icon" type="image/png" sizes="96x96" href="./favicons/favicon-96x96.png">
+  <link rel="icon" type="image/svg+xml" href="./favicons/favicon.svg">
+  <link rel="shortcut icon" href="./favicons/favicon.ico">
+  <link rel="apple-touch-icon" href="./favicons/apple-touch-icon.png">
+  <link rel="manifest" href="./favicons/site.webmanifest">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eff6ff',
+              100: '#dbeafe',
+              500: '#2563eb',
+              600: '#1d4ed8',
+              700: '#1e40af',
+              800: '#1e3a8a',
+              900: '#172554',
+            },
+            milk: {
+              cream: '#fdfbf7',
+              accent: '#0284c7',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- SheetJS (XLSX) for Excel Import and Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+  <!-- Chart.js for Visual Trends -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- Lucide icons for this standalone HTML app -->
+  <script src="https://cdn.jsdelivr.net/npm/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+
+  <style>
+    /* Custom scrollbars and print formatting */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.3);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.5);
+    }
+    @media print {
+      body {
+        background: white !important;
+        color: black !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-shadow-none {
+        box-shadow: none !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+    }
+    .print-only {
+      display: none;
+    }
+    .tab-navigation {
+      scrollbar-width: thin;
+      scrollbar-color: rgba(100, 116, 139, 0.45) transparent;
+      scroll-padding-inline: 1rem;
+      -webkit-overflow-scrolling: touch;
+    }
+    .tab-navigation::-webkit-scrollbar {
+      height: 4px;
+    }
+    .tab-navigation::-webkit-scrollbar-thumb {
+      background: rgba(100, 116, 139, 0.45);
+      border-radius: 9999px;
+    }
+    .inline-icon {
+      display: inline-block;
+      width: 1em;
+      height: 1em;
+      vertical-align: -0.125em;
+      flex: none;
+    }
+    @media (max-width: 640px) {
+      .tab-btn {
+        min-height: 42px;
+        padding-inline: 0.75rem;
+        font-size: 0.75rem;
+      }
+      #tab-calculator > div,
+      #tab-settings > div {
+        padding: 1rem;
+      }
+      #rangePrintSlip table {
+        font-size: 10px;
+      }
+      #rangePrintSlip th,
+      #rangePrintSlip td {
+        padding: 4px;
+      }
+    }
+    #rangePrintSlip {
+      color: #0f172a;
+      font: 12px/1.5 Arial, sans-serif;
+    }
+    #rangePrintSlip table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 16px;
+    }
+    #rangePrintSlip th,
+    #rangePrintSlip td {
+      border: 1px solid #cbd5e1;
+      padding: 6px 8px;
+      text-align: left;
+    }
+    #rangePrintSlip th {
+      background: #f1f5f9;
+    }
+    @media print {
+      @page {
+        margin: 14mm;
+      }
+      body.print-range-slip > * {
+        display: none !important;
+      }
+      body.print-range-slip #rangePrintSlip {
+        display: block !important;
+      }
+    }
+  </style>
+</head>
+<body class="h-full bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
+
+  <!-- ================= TOP NOTIFICATION TOAST ================= -->
+  <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-140%] opacity-0 transition-all duration-300 pointer-events-none flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl border bg-white dark:bg-slate-800 text-sm font-medium">
+    <div id="toastIcon" class="w-6 h-6 flex items-center justify-center rounded-full text-white bg-blue-600">
+      <i data-lucide="check" class="w-4 h-4" aria-hidden="true"></i>
+    </div>
+    <div id="toastMessage" class="text-slate-800 dark:text-white">सूचना</div>
+  </div>
+
+  <!-- ================= CUSTOM MODAL (Zero browser alert/confirm) ================= -->
+  <div id="customModal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden p-4">
+    <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden transform transition-all">
+      <div class="p-6">
+        <div class="flex items-center gap-3 mb-3">
+          <div id="modalIconContainer" class="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 font-bold">
+            i
+          </div>
+          <h3 id="modalTitle" class="text-lg font-bold text-slate-900 dark:text-white">पुष्टि करें</h3>
+        </div>
+        <p id="modalDescription" class="text-sm text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">क्या आप वाकई इस रिकॉर्ड को मिटाना चाहते हैं?</p>
+        <div id="modalCustomSlot" class="mb-4 hidden"></div>
+        <div class="flex items-center justify-end gap-3">
+          <button id="modalCancelBtn" class="px-4 py-2 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition">रद्द करें</button>
+          <button id="modalConfirmBtn" class="px-5 py-2 rounded-xl text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 transition shadow-md shadow-blue-500/20">आगे बढ़ें</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section id="rangePrintSlip" class="print-only"></section>
+
+  <!-- ================= HEADER / NAVBAR ================= -->
+  <header class="no-print bg-white/95 dark:bg-slate-850 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30 backdrop-blur-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <!-- Logo & Title -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-sky-400 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+            <i data-lucide="milk" class="w-6 h-6" aria-hidden="true"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-extrabold text-lg sm:text-xl tracking-tight bg-gradient-to-r from-blue-700 to-sky-500 bg-clip-text text-transparent dark:from-blue-400 dark:to-sky-300">
+                दूध हिसाब
+              </span>
+              <span class="hidden sm:inline-flex text-xs px-2 py-0.5 rounded-full font-semibold bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                Doodh Hisab v2.0
+              </span>
+            </div>
+            <p class="hidden sm:block text-[11px] text-slate-500 dark:text-slate-400 font-medium">व्यावसायिक डेयरी व ग्राहक खाता प्रणाली</p>
+          </div>
+        </div>
+
+        <!-- Quick Summary Ribbon & Controls -->
+        <div class="flex items-center gap-3">
+          <div class="hidden lg:flex items-center gap-4 bg-slate-100 dark:bg-slate-700/50 px-3 py-1.5 rounded-xl text-xs font-semibold">
+            <span class="text-slate-500 dark:text-slate-400">कुल बकाया:</span>
+            <span id="quickOutstanding" class="text-rose-600 dark:text-rose-400 font-bold text-sm">₹0.00</span>
+            <span class="text-slate-300 dark:text-slate-600">|</span>
+            <span class="text-slate-500 dark:text-slate-400">दर:</span>
+            <span id="quickRate" class="text-blue-600 dark:text-blue-400">₹33/L</span>
+          </div>
+
+          <span id="headerSyncBadge" class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold border border-slate-300 dark:border-slate-700" role="status" aria-live="polite">
+            <i data-lucide="cloud" class="w-3.5 h-3.5" aria-hidden="true"></i>
+            <span>शीट डेटा लोड हो रहा है</span>
+          </span>
+
+          <!-- Theme Toggle -->
+          <button id="themeToggleBtn" aria-label="Toggle Theme" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-750 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+            <i id="themeIcon" data-lucide="moon" class="w-4 h-4" aria-hidden="true"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="tab-navigation flex gap-1 overflow-x-auto py-2 text-xs sm:text-sm font-semibold border-t border-slate-100 dark:border-slate-750 snap-x snap-mandatory" aria-label="मुख्य नेविगेशन">
+        <button data-tab="dashboard" class="tab-btn active shrink-0 snap-start px-3.5 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition bg-blue-600 text-white shadow-sm">
+          <i data-lucide="layout-dashboard" class="w-4 h-4" aria-hidden="true"></i> डैशबोर्ड (Dashboard)
+        </button>
+        <button data-tab="calculator" class="tab-btn shrink-0 snap-start px-3.5 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <i data-lucide="calculator" class="w-4 h-4" aria-hidden="true"></i> रेंज कैलकुलेटर (Calculator)
+        </button>
+        <button data-tab="records" class="tab-btn shrink-0 snap-start px-3.5 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <i data-lucide="clipboard-list" class="w-4 h-4" aria-hidden="true"></i> सभी रिकॉर्ड (Records)
+        </button>
+        <button data-tab="payments" class="tab-btn shrink-0 snap-start px-3.5 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <i data-lucide="wallet" class="w-4 h-4" aria-hidden="true"></i> भुगतान व कटौती (Payments)
+        </button>
+        <button data-tab="reports" class="tab-btn shrink-0 snap-start px-3.5 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <i data-lucide="chart-line" class="w-4 h-4" aria-hidden="true"></i> रिपोर्ट्स व प्रिंट (Reports)
+        </button>
+        <button data-tab="settings" class="tab-btn shrink-0 snap-start px-3.5 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700">
+          <i data-lucide="settings" class="w-4 h-4" aria-hidden="true"></i> सेटिंग्स (Settings)
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+    <!-- ================= TAB 1: DASHBOARD ================= -->
+    <section id="tab-dashboard" class="tab-content space-y-6">
+      <!-- Filter Bar -->
+      <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-500">फिल्टर अवधि:</span>
+          <button class="dash-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300" data-period="all">सभी समय (All)</button>
+          <button class="dash-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" data-period="this_month">यह महीना (This Month)</button>
+          <button class="dash-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" data-period="last_month">पिछला महीना (Last Month)</button>
+          <button class="dash-filter-btn px-3 py-1.5 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700" data-period="custom">कस्टम तारीख</button>
+        </div>
+        <div id="dashCustomRange" class="hidden flex items-center gap-2 text-xs">
+          <input type="date" id="dashStartDate" class="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent text-slate-800 dark:text-slate-100">
+          <span>से</span>
+          <input type="date" id="dashEndDate" class="px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-transparent text-slate-800 dark:text-slate-100">
+          <button id="applyDashCustomFilter" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700">लागू करें</button>
+        </div>
+      </div>
+
+      <!-- KPI Metrics Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <!-- Total Milk Supplied -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+          <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">कुल दूध (Total Milk)</div>
+          <div id="kpiTotalMilk" class="text-2xl sm:text-3xl font-extrabold text-blue-600 dark:text-blue-400 mt-2">0 L</div>
+          <div id="kpiTotalMilkPav" class="text-xs font-medium text-slate-400 mt-1">0 पाव (Quarters)</div>
+          <div class="absolute -right-2 -bottom-2 text-blue-500/10 pointer-events-none group-hover:scale-110 transition"><i data-lucide="milk" class="w-14 h-14" aria-hidden="true"></i></div>
+        </div>
+
+        <!-- Total Amount -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+          <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">कुल रकम (Total Amount)</div>
+          <div id="kpiTotalAmount" class="text-2xl sm:text-3xl font-extrabold text-slate-800 dark:text-white mt-2">₹0.00</div>
+          <div class="text-xs font-medium text-emerald-500 mt-1">उत्पादित दूध मूल्य</div>
+          <div class="absolute -right-2 -bottom-2 text-slate-500/10 pointer-events-none group-hover:scale-110 transition"><i data-lucide="tag" class="w-14 h-14" aria-hidden="true"></i></div>
+        </div>
+
+        <!-- Total Received -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm relative overflow-hidden group">
+          <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">प्राप्त पैसे (Received)</div>
+          <div id="kpiTotalReceived" class="text-2xl sm:text-3xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-2">₹0.00</div>
+          <div id="kpiTotalDeductions" class="text-xs font-medium text-rose-400 mt-1">कटौती: ₹0.00</div>
+          <div class="absolute -right-2 -bottom-2 text-emerald-500/10 pointer-events-none group-hover:scale-110 transition"><i data-lucide="banknote" class="w-14 h-14" aria-hidden="true"></i></div>
+        </div>
+
+        <!-- Outstanding Balance -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-rose-950/10 shadow-sm relative overflow-hidden group">
+          <div class="text-xs font-semibold text-rose-600 dark:text-rose-400">शेष बकाया (Outstanding)</div>
+          <div id="kpiOutstanding" class="text-2xl sm:text-3xl font-extrabold text-rose-600 dark:text-rose-400 mt-2">₹0.00</div>
+          <div class="text-xs font-medium text-rose-500/80 mt-1">वर्तमान देय शेष राशि</div>
+          <div class="absolute -right-2 -bottom-2 text-rose-500/15 pointer-events-none group-hover:scale-110 transition"><i data-lucide="scale" class="w-14 h-14" aria-hidden="true"></i></div>
+        </div>
+      </div>
+
+      <!-- Secondary Metrics: Today & Monthly Highlights -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Today's Highlight -->
+        <div class="bg-gradient-to-br from-blue-600 to-indigo-700 text-white p-5 rounded-2xl shadow-lg shadow-blue-500/15 relative overflow-hidden">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-blue-200">आज का दूध (Today)</span>
+            <span id="dashTodayDate" class="text-xs bg-white/20 px-2.5 py-0.5 rounded-full font-semibold">30 Oct 2026</span>
+          </div>
+          <div class="mt-3 flex items-baseline gap-2">
+            <span id="dashTodayMilk" class="text-3xl font-extrabold">0.0 L</span>
+            <span id="dashTodayPav" class="text-sm font-medium text-blue-200">(0 पाव)</span>
+          </div>
+          <div class="mt-2 text-sm text-blue-100 flex items-center justify-between border-t border-white/20 pt-2">
+            <span>आज की रकम:</span>
+            <span id="dashTodayAmount" class="font-bold text-base text-white">₹0.00</span>
+          </div>
+        </div>
+
+        <!-- Monthly Breakdown -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="text-xs font-semibold text-slate-500 dark:text-slate-400">इस महीने का कुल दूध</div>
+            <div id="dashMonthMilk" class="text-2xl font-bold text-slate-800 dark:text-white mt-1">0 L</div>
+          </div>
+          <div class="border-t border-slate-100 dark:border-slate-700 pt-3 mt-3 flex items-center justify-between">
+            <span class="text-xs text-slate-500 dark:text-slate-400">मासिक कमाई (Monthly Earnings):</span>
+            <span id="dashMonthEarnings" class="text-base font-bold text-emerald-600 dark:text-emerald-400">₹0.00</span>
+          </div>
+        </div>
+
+        <!-- Sessions Comparison Ratio -->
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-col justify-between">
+          <div class="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">सत्र तुलना (सुबह बनाम शाम)</div>
+          <div class="space-y-2">
+            <div>
+              <div class="flex justify-between text-xs font-medium mb-1">
+                <span>सुबह (Morning)</span>
+                <span id="dashMorningTotal">0 L (0%)</span>
+              </div>
+              <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                <div id="dashMorningBar" class="bg-amber-500 h-2 rounded-full" style="width: 50%"></div>
+              </div>
+            </div>
+            <div>
+              <div class="flex justify-between text-xs font-medium mb-1">
+                <span>शाम (Evening)</span>
+                <span id="dashEveningTotal">0 L (0%)</span>
+              </div>
+              <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-2 overflow-hidden">
+                <div id="dashEveningBar" class="bg-indigo-600 h-2 rounded-full" style="width: 50%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Recent Entries Table -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between">
+          <h2 class="font-bold text-base text-slate-800 dark:text-white flex items-center gap-2">
+            <span><i data-lucide="clock-3" class="inline-icon" aria-hidden="true"></i></span> हालिया प्रविष्टियां (Recent Milk Records)
+          </h2>
+          <button onclick="switchTab('records')" class="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+            सभी देखें →
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-750 text-slate-500 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th class="px-4 py-3">दिनांक</th>
+                <th class="px-4 py-3">दिन</th>
+                <th class="px-4 py-3">सुबह (L/पाव)</th>
+                <th class="px-4 py-3">शाम (L/पाव)</th>
+                <th class="px-4 py-3">कुल दूध</th>
+                <th class="px-4 py-3">कुल पैसे</th>
+                <th class="px-4 py-3">प्राप्त</th>
+                <th class="px-4 py-3 text-right">बकाया राशि</th>
+              </tr>
+            </thead>
+            <tbody id="dashRecentTableBody" class="divide-y divide-slate-100 dark:divide-slate-700">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 3: ALL RECORDS ================= -->
+    <section id="tab-records" class="tab-content hidden space-y-4">
+      <div class="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-wrap items-end justify-between gap-4">
+        <div class="flex items-end gap-3 flex-wrap">
+          <label class="text-[11px] font-bold text-slate-500">
+            तारीख से खोजें
+            <input type="date" id="recordsFilterDate" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-xs">
+          </label>
+          <label class="text-[11px] font-bold text-slate-500">
+            महीना
+            <select id="recordsFilterMonth" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-xs font-semibold">
+              <option value="all">सभी महीने (All Months)</option>
+            </select>
+          </label>
+          <label class="text-[11px] font-bold text-slate-500">
+            सत्र फ़िल्टर
+            <select id="recordsFilterSession" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-xs font-semibold">
+              <option value="all">सभी रिकॉर्ड्स</option>
+              <option value="morning_only">केवल सुबह का दूध</option>
+              <option value="evening_only">केवल शाम का दूध</option>
+              <option value="both">दोनों सत्र</option>
+            </select>
+          </label>
+          <label class="text-[11px] font-bold text-slate-500">
+            क्रमबद्ध करें
+            <select id="recordsSortOrder" class="mt-1 block px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-750 text-xs font-semibold">
+              <option value="desc">नवीनतम पहले</option>
+              <option value="asc">पुरातन पहले</option>
+            </select>
+          </label>
+          <button type="button" id="clearRecordsFilterBtn" class="px-3 py-1.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 rounded-lg transition">
+            फ़िल्टर साफ़ करें
+          </button>
+        </div>
+        <div class="text-xs font-semibold text-slate-500" id="recordsCountText">0 रिकॉर्ड्स प्रदर्शित</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-100 dark:bg-slate-750 text-slate-700 dark:text-slate-300 font-bold border-b border-slate-200 dark:border-slate-700 whitespace-nowrap">
+              <tr>
+                <th class="px-3 py-3 text-center">क्र.सं. (S.No)</th>
+                <th class="px-4 py-3">दिनांक</th>
+                <th class="px-3 py-3">दिन</th>
+                <th class="px-3 py-3 text-amber-700 dark:text-amber-400">सुबह दूध (L)</th>
+                <th class="px-3 py-3 text-amber-700 dark:text-amber-400">सुबह (पाव)</th>
+                <th class="px-3 py-3 text-indigo-700 dark:text-indigo-400">शाम दूध (L)</th>
+                <th class="px-3 py-3 text-indigo-700 dark:text-indigo-400">शाम (पाव)</th>
+                <th class="px-4 py-3 font-extrabold text-blue-700 dark:text-blue-300">कुल दूध</th>
+                <th class="px-4 py-3 font-extrabold">कुल पैसे</th>
+                <th class="px-3 py-3 text-emerald-600 dark:text-emerald-400">प्राप्त पैसे</th>
+                <th class="px-3 py-3 text-rose-500">कटौती</th>
+                <th class="px-4 py-3 font-extrabold text-rose-600 dark:text-rose-400">बकाया पैसे</th>
+              </tr>
+            </thead>
+            <tbody id="masterRecordsTableBody" class="divide-y divide-slate-100 dark:divide-slate-700"></tbody>
+          </table>
+        </div>
+        <div id="noRecordsState" class="hidden p-12 text-center text-slate-400">
+          <i data-lucide="folder-open" class="w-10 h-10 mx-auto mb-2" aria-hidden="true"></i>
+          <p class="font-medium text-sm">कोई रिकॉर्ड नहीं मिला</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 4: DATE-RANGE CALCULATOR (KEY REQUIREMENT) ================= -->
+    <section id="tab-calculator" class="tab-content hidden max-w-5xl mx-auto space-y-6">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-4 sm:p-6 space-y-6">
+        
+        <!-- Header & Action Bar -->
+        <div class="border-b border-slate-100 dark:border-slate-700 pb-4 flex flex-wrap items-center justify-between gap-4">
+          <div class="flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 to-orange-500 flex items-center justify-center text-white text-xl font-bold shadow-md shadow-amber-500/20">
+              <i data-lucide="calculator" class="inline-icon" aria-hidden="true"></i>
+            </div>
+            <div>
+              <h2 class="text-xl font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                तारीख सीमा दूध व रकम कैलकुलेटर
+                <span class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300">
+                  उन्नत सीमा विकल्प (Advanced Filters)
+                </span>
+              </h2>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                प्रारंभिक और समाप्ति तारीख के सुबह/शाम सत्रों को स्वतंत्र रूप से शामिल या बाहर करें।
+              </p>
+            </div>
+          </div>
+
+          <!-- Range Export Buttons Group -->
+          <div class="flex items-center gap-2 flex-wrap">
+            <button id="calcExportExcelBtn" class="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-emerald-600/20 transition">
+              <span><i data-lucide="download" class="inline-icon" aria-hidden="true"></i></span> रेंज एक्सेल डाउनलोड (.xlsx)
+            </button>
+            <button id="calcExportCsvBtn" class="px-3.5 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+              <span><i data-lucide="file-text" class="inline-icon" aria-hidden="true"></i></span> CSV
+            </button>
+            <button id="calcPrintSummaryBtn" class="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 shadow-md shadow-blue-500/20 transition">
+              <i data-lucide="printer" class="w-4 h-4" aria-hidden="true"></i> प्रिंट पर्ची (Print Slip)
+            </button>
+          </div>
+        </div>
+
+        <!-- Comprehensive Boundary Options Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          
+          <!-- Starting Date Box with Morning & Evening Toggles -->
+          <div class="lg:col-span-4 bg-amber-50/50 dark:bg-amber-950/15 p-4 rounded-2xl border-2 border-amber-200 dark:border-amber-800/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                <span><i data-lucide="calendar-days" class="inline-icon" aria-hidden="true"></i></span> प्रारंभिक तारीख (Starting Date)
+              </span>
+              <span id="calcStartWeekdayBadge" class="text-[11px] font-bold text-amber-700 dark:text-amber-400">शुक्रवार</span>
+            </div>
+            
+            <input type="date" id="calcStartDate" class="w-full px-3 py-2 rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+
+            <!-- Starting Date Session Checkboxes -->
+            <div class="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-xl border border-amber-200 dark:border-amber-900/40 space-y-2">
+              <span class="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">प्रारंभिक दिन के सत्र शामिल करें:</span>
+              <div class="flex items-center justify-between gap-2">
+                <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200 select-none">
+                  <input type="checkbox" id="calcStartMorning" checked class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500">
+                  <span><i data-lucide="sun" class="inline-icon" aria-hidden="true"></i> सुबह (Morning)</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200 select-none">
+                  <input type="checkbox" id="calcStartEvening" checked class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                  <span><i data-lucide="moon" class="inline-icon" aria-hidden="true"></i> शाम (Evening)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Middle / Intervening Days Filter Box -->
+          <div class="lg:col-span-4 bg-slate-50 dark:bg-slate-750 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3 flex flex-col justify-between">
+            <div>
+              <span class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <span><i data-lucide="refresh-cw" class="inline-icon" aria-hidden="true"></i></span> बीच के दिनों का सत्र (Intervening Days)
+              </span>
+              <p class="text-[11px] text-slate-400 mt-0.5">प्रारंभिक व समाप्ति के मध्य सभी तारीखों पर लागू</p>
+            </div>
+
+            <div>
+              <select id="calcInterveningSession" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                <option value="both">दोनों सत्र (Morning + Evening)</option>
+                <option value="morning">केवल सुबह (Morning Only)</option>
+                <option value="evening">केवल शाम (Evening Only)</option>
+              </select>
+            </div>
+
+            <!-- Custom Rate Override Option -->
+            <div class="pt-2 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+              <label class="flex items-center gap-2 text-slate-600 dark:text-slate-400 cursor-pointer">
+                <input type="checkbox" id="calcUseCustomRate" class="w-3.5 h-3.5 rounded text-blue-600">
+                <span>कस्टम दर लागू करें</span>
+              </label>
+              <div id="calcCustomRateInputs" class="hidden flex items-center gap-1.5">
+                <input type="number" id="calcRatePerLitre" placeholder="₹/L" value="33" class="w-14 px-2 py-1 text-xs border rounded-lg bg-white dark:bg-slate-800 text-center font-bold">
+                <span class="text-[10px] text-slate-400">/L</span>
+                <input type="number" id="calcRatePerPav" placeholder="₹/P" value="8" class="w-12 px-2 py-1 text-xs border rounded-lg bg-white dark:bg-slate-800 text-center font-bold">
+                <span class="text-[10px] text-slate-400">/पाव</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Ending Date Box with Morning & Evening Toggles -->
+          <div class="lg:col-span-4 bg-indigo-50/50 dark:bg-indigo-950/15 p-4 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800/40 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-1.5">
+                <span><i data-lucide="calendar-days" class="inline-icon" aria-hidden="true"></i></span> समाप्ति तारीख (Ending Date)
+              </span>
+              <span id="calcEndWeekdayBadge" class="text-[11px] font-bold text-indigo-700 dark:text-indigo-400">शुक्रवार</span>
+            </div>
+            
+            <input type="date" id="calcEndDate" class="w-full px-3 py-2 rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 font-bold text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+
+            <!-- Ending Date Session Checkboxes -->
+            <div class="bg-white/80 dark:bg-slate-800/80 p-2.5 rounded-xl border border-indigo-200 dark:border-indigo-900/40 space-y-2">
+              <span class="text-[11px] font-bold text-slate-600 dark:text-slate-400 block">समाप्ति दिन के सत्र शामिल करें:</span>
+              <div class="flex items-center justify-between gap-2">
+                <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200 select-none">
+                  <input type="checkbox" id="calcEndMorning" checked class="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500">
+                  <span><i data-lucide="sun" class="inline-icon" aria-hidden="true"></i> सुबह (Morning)</span>
+                </label>
+                <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer text-slate-800 dark:text-slate-200 select-none">
+                  <input type="checkbox" id="calcEndEvening" checked class="w-4 h-4 text-indigo-600 rounded border-slate-300 focus:ring-indigo-500">
+                  <span><i data-lucide="moon" class="inline-icon" aria-hidden="true"></i> शाम (Evening)</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Quick Range Presets -->
+        <div class="flex items-center gap-2 flex-wrap text-xs">
+          <span class="font-bold text-slate-400 uppercase text-[11px]">त्वरित चयन:</span>
+          <button type="button" class="calc-preset-btn px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold" data-preset="last7">अंतिम 7 दिन</button>
+          <button type="button" class="calc-preset-btn px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold" data-preset="last10">20 से 30 अक्टूबर (10 दिन)</button>
+          <button type="button" class="calc-preset-btn px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold" data-preset="last15">अंतिम 15 दिन</button>
+          <button type="button" class="calc-preset-btn px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 font-semibold" data-preset="thisMonth">यह पूरा महीना</button>
+        </div>
+
+        <!-- Calculator Output Cards Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          
+          <div class="bg-slate-50 dark:bg-slate-750 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-center">
+            <span class="text-xs text-slate-500 dark:text-slate-400 font-medium block">कैलेंडर दिन</span>
+            <span id="calcTotalDays" class="text-2xl font-black text-slate-800 dark:text-white mt-1 block">0</span>
+            <span class="text-[10px] text-slate-400">कुल दिन</span>
+          </div>
+
+          <div class="bg-blue-50/60 dark:bg-blue-950/20 p-4 rounded-xl border border-blue-200 dark:border-blue-900/50 text-center">
+            <span class="text-xs text-blue-700 dark:text-blue-300 font-medium block">दूध आपूर्ति दिन</span>
+            <span id="calcSuppliedDays" class="text-2xl font-black text-blue-600 dark:text-blue-400 mt-1 block">0</span>
+            <span class="text-[10px] text-blue-400">सक्रिय दिन</span>
+          </div>
+
+          <div class="bg-amber-50/60 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200 dark:border-amber-900/50 text-center">
+            <span class="text-xs text-amber-800 dark:text-amber-300 font-medium block">चयनित सुबह दूध</span>
+            <span id="calcMorningMilk" class="text-xl font-black text-amber-700 dark:text-amber-400 mt-1 block">0 L</span>
+            <span id="calcMorningPavTotal" class="text-[10px] text-amber-600">0 पाव</span>
+          </div>
+
+          <div class="bg-indigo-50/60 dark:bg-indigo-950/20 p-4 rounded-xl border border-indigo-200 dark:border-indigo-900/50 text-center">
+            <span class="text-xs text-indigo-800 dark:text-indigo-300 font-medium block">चयनित शाम दूध</span>
+            <span id="calcEveningMilk" class="text-xl font-black text-indigo-700 dark:text-indigo-400 mt-1 block">0 L</span>
+            <span id="calcEveningPavTotal" class="text-[10px] text-indigo-600">0 पाव</span>
+          </div>
+
+          <div class="bg-emerald-50/60 dark:bg-emerald-950/20 p-4 rounded-xl border border-emerald-200 dark:border-emerald-900/50 text-center">
+            <span class="text-xs text-emerald-800 dark:text-emerald-300 font-bold block">रेंज का कुल दूध</span>
+            <span id="calcGrandTotalMilk" class="text-2xl font-black text-emerald-700 dark:text-emerald-400 mt-1 block">0 L</span>
+            <span id="calcDecimalMilk" class="text-[10px] text-emerald-600">(0.00 L)</span>
+          </div>
+
+          <div class="bg-gradient-to-br from-emerald-600 to-teal-700 text-white p-4 rounded-xl text-center shadow-lg shadow-emerald-600/20">
+            <span class="text-xs font-bold text-emerald-100 block">कुल देय रकम</span>
+            <span id="calcGrandTotalAmount" class="text-2xl font-black mt-1 block">₹0.00</span>
+            <span id="calcRateAppliedBadge" class="text-[10px] text-emerald-200">₹33/L, ₹8/पाव</span>
+          </div>
+
+        </div>
+
+        <!-- Breakdown Table in Calculator -->
+        <div class="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden">
+          <div class="p-3.5 bg-slate-50 dark:bg-slate-750 border-b border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span class="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                दैनिक विस्तृत विवरण (Daily Breakdown of Selected Range)
+              </span>
+              <span class="text-[11px] text-slate-400">प्रत्येक दिन शामिल सत्र और गणना स्पष्ट रूप से प्रदर्शित हैं</span>
+            </div>
+            <div class="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+              शुद्ध देय राशि: <span id="calcBreakdownNetText">₹0.00</span>
+            </div>
+          </div>
+          <div class="overflow-x-auto max-h-96">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-white dark:bg-slate-800 text-slate-500 font-bold border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+                <tr>
+                  <th class="px-3 py-2.5">दिनांक</th>
+                  <th class="px-3 py-2.5">दिन</th>
+                  <th class="px-3 py-2.5">लागू सत्र</th>
+                  <th class="px-3 py-2.5 text-amber-700 dark:text-amber-400">सुबह (L/पाव)</th>
+                  <th class="px-3 py-2.5 text-indigo-700 dark:text-indigo-400">शाम (L/पाव)</th>
+                  <th class="px-3 py-2.5 font-bold text-blue-600">चयनित कुल दूध</th>
+                  <th class="px-3 py-2.5 text-right font-bold">रकम (₹)</th>
+                  <th class="px-3 py-2.5 text-right text-emerald-600">प्राप्त (₹)</th>
+                </tr>
+              </thead>
+              <tbody id="calcBreakdownTableBody" class="divide-y divide-slate-100 dark:divide-slate-700">
+                <!-- JS populated -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </section>
+    <!-- ================= TAB 5: PAYMENTS & DEDUCTIONS ================= -->
+    <section id="tab-payments" class="tab-content hidden max-w-5xl mx-auto space-y-6">
+      
+      <!-- Payments Summary Cards -->
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">कुल प्राप्त भुगतान (Total Received)</span>
+          <div id="paymentsTotalReceived" class="text-2xl font-black text-emerald-600 mt-2">₹0.00</div>
+          <span class="text-[11px] text-slate-400">ग्राहक द्वारा चुकाई गई कुल राशि</span>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+          <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">कुल कटौती (Total Deductions)</span>
+          <div id="paymentsTotalDeductions" class="text-2xl font-black text-rose-500 mt-2">₹0.00</div>
+          <span class="text-[11px] text-slate-400">दूध खराबी / अन्य कटौती</span>
+        </div>
+
+        <div class="bg-white dark:bg-slate-800 p-5 rounded-2xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/20 dark:bg-rose-950/10 shadow-sm">
+          <span class="text-xs font-semibold text-rose-600 dark:text-rose-400">वर्तमान कुल बकाया (Net Outstanding)</span>
+          <div id="paymentsNetOutstanding" class="text-2xl font-black text-rose-600 dark:text-rose-400 mt-2">₹0.00</div>
+          <span class="text-[11px] text-rose-500/80">अंतिम शेष देय राशि</span>
+        </div>
+      </div>
+
+      <!-- Ledger Table -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm overflow-hidden">
+        <div class="p-4 border-b border-slate-100 dark:border-slate-700">
+          <h4 class="font-bold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider">भुगतान इतिहास व खाता बही (Payment Ledger)</h4>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-50 dark:bg-slate-750 text-slate-500 dark:text-slate-400 font-bold border-b border-slate-200 dark:border-slate-700">
+              <tr>
+                <th class="px-4 py-3">दिनांक</th>
+                <th class="px-4 py-3">दिन</th>
+                <th class="px-4 py-3">दूध मूल्य (₹)</th>
+                <th class="px-4 py-3 text-emerald-600">प्राप्त (₹)</th>
+                <th class="px-4 py-3 text-rose-500">कटौती (₹)</th>
+                <th class="px-4 py-3 text-rose-600 dark:text-rose-400 font-bold">अंतिम शेष (₹)</th>
+              </tr>
+            </thead>
+            <tbody id="paymentsLedgerTableBody" class="divide-y divide-slate-100 dark:divide-slate-700">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ================= TAB 6: REPORTS & PRINT ================= -->
+    <section id="tab-reports" class="tab-content hidden space-y-6">
+      
+      <!-- Control Bar -->
+      <div class="no-print bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <span><i data-lucide="chart-line" class="inline-icon" aria-hidden="true"></i></span> विस्तृत लेखा रिपोर्ट व बिल पर्ची (Reports & Invoices)
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">मासिक, वार्षिक, अथवा चयनित तारीखों की औपचारिक प्रिंट पर्ची बनाएं</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <select id="reportPeriodSelect" class="px-3.5 py-2 rounded-xl text-xs font-semibold border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800">
+            <option value="this_month">यह महीना (This Month)</option>
+            <option value="last_month">पिछला महीना (Last Month)</option>
+            <option value="all_time">संपूर्ण इतिहास (All Time)</option>
+          </select>
+          <button onclick="window.print()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 flex items-center gap-1.5 shadow-md shadow-blue-500/20">
+            <span><i data-lucide="printer" class="inline-icon" aria-hidden="true"></i></span> प्रिंट / PDF डाउनलोड
+          </button>
+        </div>
+      </div>
+
+      <!-- Trend Chart -->
+      <div class="no-print bg-white dark:bg-slate-800 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 mb-4 flex items-center gap-2">
+          <span><i data-lucide="chart-column-increasing" class="inline-icon" aria-hidden="true"></i></span> दूध आपूर्ति व रुझान ग्राफ़ (Milk Supply Trends)
+        </h3>
+        <div class="h-64 w-full">
+          <canvas id="milkTrendChart"></canvas>
+        </div>
+      </div>
+
+      <!-- Printable Dairy Invoice / Statement Card -->
+      <div id="printableInvoiceCard" class="bg-white dark:bg-slate-800 p-8 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm print-shadow-none">
+        <!-- Invoice Header -->
+        <div class="flex flex-wrap items-start justify-between border-b-2 border-slate-800 dark:border-slate-300 pb-4 mb-6">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="text-2xl font-black text-slate-900 dark:text-white">दूध हिसाब (Doodh Hisab)</span>
+              <span class="text-xs px-2 py-0.5 rounded bg-slate-200 dark:bg-slate-700 font-bold">डेयरी पर्ची</span>
+            </div>
+            <p class="text-xs text-slate-600 dark:text-slate-400 mt-1">व्यावसायिक ग्राहक दुग्ध आपूर्ति एवं भुगतान विवरण पत्र</p>
+          </div>
+          <div class="text-right text-xs text-slate-500 dark:text-slate-400">
+            <p>जारी करने की तारीख: <span id="reportGeneratedDate" class="font-bold text-slate-800 dark:text-slate-200"></span></p>
+            <p>दर: <span id="reportRateInfo" class="font-bold text-slate-800 dark:text-slate-200">₹33/L, ₹8/पाव</span></p>
+          </div>
+        </div>
+
+        <!-- Statement Metadata -->
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-750 mb-6 text-xs">
+          <div>
+            <span class="text-slate-400 block">कुल दूध मात्रा:</span>
+            <span id="reportTotalMilkQty" class="text-base font-bold text-slate-900 dark:text-white">0 L</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">कुल उत्पाद मूल्य:</span>
+            <span id="reportTotalAmount" class="text-base font-bold text-slate-900 dark:text-white">₹0.00</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">कुल प्राप्त भुगतान:</span>
+            <span id="reportTotalPaid" class="text-base font-bold text-emerald-600">₹0.00</span>
+          </div>
+          <div>
+            <span class="text-slate-400 block">अंतिम शेष बकाया:</span>
+            <span id="reportFinalBalance" class="text-base font-bold text-rose-600">₹0.00</span>
+          </div>
+        </div>
+
+        <!-- Table for print -->
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs border border-slate-200 dark:border-slate-700">
+            <thead class="bg-slate-100 dark:bg-slate-700 font-bold text-slate-700 dark:text-slate-200">
+              <tr>
+                <th class="p-2 border">दिनांक</th>
+                <th class="p-2 border">दिन</th>
+                <th class="p-2 border">सुबह दूध</th>
+                <th class="p-2 border">शाम दूध</th>
+                <th class="p-2 border">कुल दूध</th>
+                <th class="p-2 border">कुल रकम</th>
+                <th class="p-2 border">प्राप्त</th>
+                <th class="p-2 border">कटौती</th>
+                <th class="p-2 border text-right">बकाया राशि</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableBody" class="divide-y divide-slate-200 dark:divide-slate-700">
+              <!-- JS rendered -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Signatures Row -->
+        <div class="mt-12 pt-8 border-t border-slate-200 dark:border-slate-700 flex justify-between text-xs text-slate-500">
+          <div class="text-center w-40">
+            <div class="h-10 border-b border-dashed border-slate-400 mb-2"></div>
+            <p class="font-bold">डेयरी संचालक हस्ताक्षर</p>
+          </div>
+          <div class="text-center w-40">
+            <div class="h-10 border-b border-dashed border-slate-400 mb-2"></div>
+            <p class="font-bold">ग्राहक / प्राप्तकर्ता हस्ताक्षर</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= TAB 7: EXCEL IMPORT / EXPORT ================= -->
+    <section id="tab-excel" class="tab-content hidden max-w-4xl mx-auto space-y-6">
+      
+      <!-- Export Card -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-950/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-xl font-bold">
+            <i data-lucide="download" class="inline-icon" aria-hidden="true"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-800 dark:text-white">एक्सेल फाइल निर्यात करें (Export to Excel .xlsx)</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">आपकी मूल स्प्रेडशीट की तरह सटीक हिंदी कॉलम हेडर सुरक्षित रखता है।</p>
+          </div>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-750 border border-slate-200 dark:border-slate-700 text-xs text-slate-600 dark:text-slate-300">
+          <p class="font-bold mb-1">संरक्षित कॉलम संरचना:</p>
+          <code class="text-blue-600 dark:text-blue-400 font-mono text-[11px] block break-all">
+            S.No | दिनांक | दिन | सुबह दूध (L) | सुबह (पाव) | शाम दूध (L) | शाम (पाव) | कुल दूध | कुल पैसे | प्राप्त पैसे | कटौती पैसे | बकाया पैसे
+          </code>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button id="exportAllExcelActionBtn" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition flex items-center gap-2">
+            <span><i data-lucide="download" class="inline-icon" aria-hidden="true"></i></span> संपूर्ण दूध हिसाब डाउनलोड करें (दूध हिसाब.xlsx)
+          </button>
+          <button id="exportMonthExcelActionBtn" class="px-4 py-2.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-650 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition">
+            <i data-lucide="calendar-days" class="inline-icon" aria-hidden="true"></i> केवल इस महीने का निर्यात करें
+          </button>
+        </div>
+      </div>
+
+      <!-- Import Card -->
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 space-y-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 flex items-center justify-center text-blue-600 dark:text-blue-400 text-xl font-bold">
+            <i data-lucide="upload" class="inline-icon" aria-hidden="true"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-slate-800 dark:text-white">मौजूदा एक्सेल फाइल आयात करें (Import Excel File)</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400">अपनी पूर्व एक्सेल (.xlsx, .xls, .csv) अपलोड करें। कोई भी डेटा खोए बिना स्वतः जुड़ जाएगा।</p>
+          </div>
+        </div>
+
+        <!-- Drag & Drop Zone -->
+        <div id="dropZone" class="border-2 border-dashed border-slate-300 dark:border-slate-600 hover:border-blue-500 dark:hover:border-blue-400 rounded-2xl p-8 text-center cursor-pointer bg-slate-50 dark:bg-slate-750 transition group">
+          <input type="file" id="excelFileInput" accept=".xlsx, .xls, .csv" class="hidden">
+          <div class="mb-2 group-hover:scale-110 transition transform"><i data-lucide="chart-column-increasing" class="w-10 h-10" aria-hidden="true"></i></div>
+          <p class="text-sm font-bold text-slate-700 dark:text-slate-200">फाइल यहाँ खींचे या ब्राउज़ करने के लिए क्लिक करें</p>
+          <p class="text-xs text-slate-400 mt-1">दूध हिसाब.xlsx या कोई भी संबंधित स्प्रेडशीट फाइल स्वीकार्य है</p>
+        </div>
+
+        <!-- Import Status / Preview -->
+        <div id="importPreviewBox" class="hidden p-4 rounded-xl bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 space-y-3">
+          <div class="flex items-center justify-between text-xs">
+            <span class="font-bold text-blue-900 dark:text-blue-200" id="importFileName">file.xlsx</span>
+            <span class="px-2 py-0.5 rounded bg-blue-200 dark:bg-blue-800 text-blue-900 dark:text-blue-100 font-bold" id="importRowCount">0 पंक्तियां खोजी गईं</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button id="confirmImportBtn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition">
+              डेटा आयात व सहेजें (Confirm Import)
+            </button>
+            <button id="cancelImportBtn" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition">
+              रद्द करें
+            </button>
+          </div>
+        </div>
+      </div>
+
+
+    </section>
+
+    <!-- ================= TAB 8: SETTINGS ================= -->
+    <section id="tab-settings" class="tab-content hidden max-w-3xl mx-auto space-y-6">
+      <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm p-6 space-y-6">
+        
+        <div class="border-b border-slate-100 dark:border-slate-700 pb-4">
+          <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+            <span><i data-lucide="settings" class="inline-icon" aria-hidden="true"></i></span> प्रणाली गणना एवं दर सेटिंग्स (Central Calculation Engine Settings)
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+            यहाँ बदलाव करने से ऐप के सभी रिकॉर्ड्स, डैशबोर्ड तथा रिपोर्ट्स की गणनाएं तुरंत स्वतः अपडेट हो जाती हैं।
+          </p>
+        </div>
+
+        <form id="settingsForm" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                दूध प्रति लीटर दर (Price per Litre ₹)
+              </label>
+              <input type="number" step="any" min="1" id="settingRatePerLitre" value="33" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-sm">
+              <span class="text-[10px] text-slate-400">डिफ़ॉल्ट मान: ₹33</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                दूध प्रति पाव दर (Price per Pav ₹)
+              </label>
+              <input type="number" step="any" min="0" id="settingRatePerPav" value="8" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-sm">
+              <span class="text-[10px] text-slate-400">डिफ़ॉल्ट मान: ₹8 (1 पाव = 250ml)</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                पाव प्रति लीटर (Pav per Litre)
+              </label>
+              <input type="number" step="1" min="1" max="10" id="settingPavPerLitre" value="4" required class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-sm">
+              <span class="text-[10px] text-slate-400">मानक मान: 4 पाव = 1 लीटर</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                प्रारंभिक पुराना बकाया (Opening Balance ₹)
+              </label>
+              <input type="number" step="any" id="settingOpeningBalance" value="0" class="w-full px-3.5 py-2 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 font-bold text-sm">
+              <span class="text-[10px] text-slate-400">यदि पिछला कोई बकाया अग्रिम हो</span>
+            </div>
+          </div>
+
+          <div class="pt-3 flex justify-end">
+            <button type="submit" class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/20 transition">
+              सेटिंग्स सहेजें व पुनर्गणना करें
+            </button>
+          </div>
+        </form>
+
+        <!-- Danger Zone & Data Reset -->
+        <div class="border-t border-slate-100 dark:border-slate-700 pt-6 space-y-3">
+          <h4 class="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider">डेटा बैकअप व रीसेट</h4>
+          <div class="flex flex-wrap gap-3">
+            <button type="button" id="backupJsonBtn" class="px-4 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+              <i data-lucide="save" class="inline-icon" aria-hidden="true"></i> JSON बैकअप डाउनलोड करें
+            </button>
+            <button type="button" id="loadSampleDataBtn" class="px-4 py-2 rounded-xl border border-blue-300 dark:border-blue-800 text-blue-600 dark:text-blue-400 text-xs font-bold hover:bg-blue-50 dark:hover:bg-blue-950/40 transition">
+              <i data-lucide="refresh-cw" class="inline-icon" aria-hidden="true"></i> डिफ़ॉल्ट परीक्षण डेटा लोड करें (Sample Oct 2026)
+            </button>
+            <button type="button" id="clearDatabaseBtn" class="px-4 py-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-100 transition">
+              <i data-lucide="trash-2" class="inline-icon" aria-hidden="true"></i> सारा डेटा साफ़ करें (Clear All)
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= FOOTER ================= -->
+  <footer class="no-print border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-850 py-4 text-center text-xs text-slate-500 dark:text-slate-400">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <span><i data-lucide="milk" class="inline-icon" aria-hidden="true"></i> <strong>दूध हिसाब</strong> – पेशेवर दुग्ध लेखांकन और ग्राहक प्रबंधन प्रणाली</span>
+      <span class="text-[11px]">सुरक्षित स्थानीय संचयन (Persistent IndexedDB) • शून्य सर्वर निर्भरता</span>
+    </div>
+  </footer>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+<script src="script.js"></script>
+</body>
+</html>
